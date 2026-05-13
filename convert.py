@@ -1,7 +1,6 @@
 from pathlib import Path
 import subprocess
-
-NAS_PATH = Path('Z:/Movies')
+import sys
 
 def is_hevc(file_path):
     try:
@@ -14,20 +13,30 @@ def is_hevc(file_path):
         print(f"Error checking codec for {file_path}: {e}")
         return False
 
-def convert(input_file, output_file):
+def convert(input_file):
     try:
+        output_file = input_file.with_suffix('.mkv')
         subprocess.run(
-            ['ffmpeg', '-i', str(input_file), '-c:v', 'libx264', '-crf', '23', '-preset', 'medium', str(output_file)],
+            ['ffmpeg', '-i', str(input_file), '-map', '0', '-c', 'copy', str(output_file)],
+            stdout=subprocess.DEVNULL,
             check=True
         )
         print(f"Converted {input_file} to {output_file}")
     except subprocess.CalledProcessError as e:
         print(f"Error converting {input_file}: {e}")
 
-def main():
-    mp4_hevc_files = [file.name for file in NAS_PATH.rglob('*.mp4') if is_hevc(file)]
-    print(mp4_hevc_files)
-    print(len(mp4_hevc_files))
+def main(args):
+    path = Path(args[0] if args else '.')
+    print(f"Scanning for mp4 files in {path}...")
+    mp4_files = [file for file in path.rglob('*.mp4')]
+    hevc_files = [file for file in mp4_files if is_hevc(file)]
+    print(f"Found {len(mp4_files)} mp4 files, {len(hevc_files)} of which are hevc.")
+    # for hevc_file in hevc_files:
+    #     output_file = hevc_file.with_suffix('.converted.mp4')
+    #     convert(hevc_file, output_file)\
+    first = hevc_files[0] if hevc_files else None
+    print(first.name)
+    convert(first)
 
 if __name__ == '__main__':
-    main()
+    main(sys.argv[1:])
